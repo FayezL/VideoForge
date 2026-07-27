@@ -2,7 +2,7 @@
 
 # VideoForge
 
-**A desktop application that transforms FFmpeg into an intelligent, point-and-click video processing pipeline — featuring a custom computer-vision logo detector, multi-task batch processing, and parallel encoding.**
+**A desktop application that transforms FFmpeg into an intelligent, point-and-click video processing pipeline — featuring a custom computer-vision logo detector, multi-task batch processing, and [...]
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white)](https://python.org)
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-4.0%2B-007808?logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
@@ -18,7 +18,7 @@
 
 ## The Problem
 
-Video editors, archivists, and media teams often need to batch-process hundreds of recordings: trim intros, remove broadcaster watermarks, re-encode for compatibility, and rename files sequentially. Doing this manually with FFmpeg CLI commands is:
+Video editors, archivists, and media teams often need to batch-process hundreds of recordings: trim intros, remove broadcaster watermarks, re-encode for compatibility, and rename files sequentiall[...]
 
 - **Error-prone** — one wrong flag ruins hours of encoding
 - **Repetitive** — the same operations run again and again
@@ -27,9 +27,9 @@ Video editors, archivists, and media teams often need to batch-process hundreds 
 
 ## The Solution
 
-VideoForge wraps FFmpeg's raw power into a clean, dark-themed desktop GUI built with **CustomTkinter**. Instead of memorizing flags and writing Bash scripts, users drag-drop files, toggle options, and click **Start**. Behind the scenes, a custom computer-vision pipeline auto-detects watermarks, a thread pool processes files in parallel, and live progress keeps users informed.
+VideoForge wraps FFmpeg's raw power into a clean, dark-themed desktop GUI built with **CustomTkinter**. Instead of memorizing flags and writing Bash scripts, users drag-drop files, toggle options,[...]
 
-> Originally built to replace a pile of personal Bash scripts, VideoForge grew into a full desktop application demonstrating **classical computer vision, concurrent processing, and clean software architecture**.
+> Originally built to replace a pile of personal Bash scripts, VideoForge grew into a full desktop application demonstrating **classical computer vision, concurrent processing, and clean software [...]
 
 ---
 
@@ -65,16 +65,16 @@ Three cut modes, all working on any video length — no need to know exact durat
 Split mode is useful for breaking long recordings into episode-length segments or fitting files under size limits.
 
 ### Multi-Task Batch Processing
-Run multiple task tabs simultaneously — each with its own file list, trim settings, encoding profile, and output folder. A worker pool processes files concurrently with per-file progress bars and live FFmpeg log output.
+Run multiple task tabs simultaneously — each with its own file list, trim settings, encoding profile, and output folder. A worker pool processes files concurrently with per-file progress bars an[...]
 
 ### Visual Logo Picker
-Click-drag a rectangle on a preview frame to manually select a watermark region. Coordinates convert from display resolution to original video resolution automatically. Copy-paste support for applying the same region across files.
+Click-drag a rectangle on a preview frame to manually select a watermark region. Coordinates convert from display resolution to original video resolution automatically. Copy-paste support for appl[...]
 
 ### Sequential Rename Plan
 Automatically renames output files with zero-padded sequential numbering (`episode01.mp4`, `episode02.mp4`, …) — works for any batch size.
 
 ### Parallel Encoding + CPU Controls
-A configurable thread pool (`1–8` workers) runs multiple FFmpeg encodes concurrently. Per-process thread limiting and OS priority control prevent CPU saturation while keeping the system responsive.
+A configurable thread pool (`1–8` workers) runs multiple FFmpeg encodes concurrently. Per-process thread limiting and OS priority control prevent CPU saturation while keeping the system responsi[...]
 
 ### One-Click `.exe` Packaging
 PyInstaller bundles everything — including the FFmpeg binary — into a standalone Windows executable. No Python install required for end users.
@@ -137,7 +137,7 @@ All profiles use `libx264`, `yuv420p` pixel format, and `+faststart` for web str
 
 ## Performance
 
-VideoForge's parallel worker pool delivers measurable speedups over sequential processing. The benchmark below processes **8 video clips** (12s each) with identical encoding settings (`libx264 -preset slow -crf 23`) — only the scheduling changes.
+VideoForge's parallel worker pool delivers measurable speedups over sequential processing. The benchmark below processes **8 video clips** (12s each) with identical encoding settings (`libx264 -p[...]
 
 | Approach | Time | Speedup | Faster |
 |---|---:|---:|---:|
@@ -238,6 +238,25 @@ Set `GOOGLE_APPLICATION_CREDENTIALS` to your service-account JSON. See [`docs/LO
 
 ---
 
+## Gallery
+
+### Task-Based Batch Workflow
+Configure multiple independent processing tasks with separate file lists, trim modes, and encoding profiles.
+
+![Batch Processor — Task 1](docs/screenshots/task1-config.png)
+
+### Real-Time Progress Tracking
+Live FFmpeg output, per-file progress bars, and concurrent encoding with worker pool management.
+
+![FFmpeg Encoding in Progress](docs/screenshots/ffmpeg-progress.png)
+
+### Visual Logo Picker
+Click-drag a rectangle to manually select watermark regions. Coordinates automatically convert from display resolution to original video resolution. Tested on everything from indie films to classic cinema.
+
+![Logo Picker — Manual Selection](docs/screenshots/logo-picker.png)
+
+---
+
 ## Packaging a Windows Executable
 
 ```bash
@@ -307,7 +326,7 @@ specs/                           # Historical feature design records
 
 This project demonstrates several skills relevant to professional software engineering:
 
-- **Classical Computer Vision** — designed and implemented a temporal-variance logo-detection algorithm from scratch using NumPy array operations and OpenCV morphology, replacing a legacy edge-based detector that produced excessive false positives
+- **Classical Computer Vision** — designed and implemented a temporal-variance logo-detection algorithm from scratch using NumPy array operations and OpenCV morphology, replacing a legacy edge-[...]
 - **Concurrent Processing** — built a thread-safe worker pool with queue-based task distribution, graceful shutdown, and active-process tracking
 - **Subprocess Orchestration** — real-time FFmpeg progress parsing via stderr regex monitoring, dual execution paths (ffmpeg-python + raw subprocess) with automatic fallback
 - **Test-Driven Development** — 216 tests including integration tests that verify actual FFmpeg output, and synthetic-frame CV tests that run deterministically without video files
