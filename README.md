@@ -81,6 +81,25 @@ PyInstaller bundles everything — including the FFmpeg binary — into a standa
 
 ---
 
+## Gallery
+
+### Task-Based Batch Workflow
+Configure multiple independent processing tasks with separate file lists, trim modes, and encoding profiles.
+
+![Batch Processor — Task 1](docs/screenshots/main-window.png)
+
+### Real-Time Progress Tracking
+Live FFmpeg output, per-file progress bars, and concurrent encoding with worker pool management.
+
+![FFmpeg Encoding in Progress](docs/screenshots/FFmpeg%20Encoding%20in%20Progress.png)
+
+### Visual Logo Picker
+Click-drag a rectangle to manually select watermark regions. Coordinates automatically convert from display resolution to original video resolution. Tested on everything from indie films to classic cinema.
+
+![Logo Picker — Manual Selection](docs/screenshots/Logo%20Picker.png)
+
+---
+
 ## Architecture
 
 ```
@@ -235,25 +254,6 @@ Set `GOOGLE_APPLICATION_CREDENTIALS` to your service-account JSON. See [`docs/LO
    - Output folder, format, filename prefix/suffix
    - Sequential rename plan
 4. **Click Start** — live progress per file, FFmpeg log output, stop button for cancellation
-
----
-
-## Gallery
-
-### Task-Based Batch Workflow
-Configure multiple independent processing tasks with separate file lists, trim modes, and encoding profiles.
-
-![Batch Processor — Task 1](docs/screenshots/task1-config.png)
-
-### Real-Time Progress Tracking
-Live FFmpeg output, per-file progress bars, and concurrent encoding with worker pool management.
-
-![FFmpeg Encoding in Progress](docs/screenshots/ffmpeg-progress.png)
-
-### Visual Logo Picker
-Click-drag a rectangle to manually select watermark regions. Coordinates automatically convert from display resolution to original video resolution. Tested on everything from indie films to classic cinema.
-
-![Logo Picker — Manual Selection](docs/screenshots/logo-picker.png)
 
 ---
 
