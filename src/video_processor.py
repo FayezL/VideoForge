@@ -292,7 +292,7 @@ class VideoProcessor:
         self,
         input_path: str,
         output_path: str,
-        on_progress: Optional[Callable[[float], None]] = None,
+        on_progress: Optional[Callable[[float, Optional[float]], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
         processing_file: Optional[ProcessingFile] = None,
     ) -> Tuple[bool, Optional[str]]:
