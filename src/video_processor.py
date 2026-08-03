@@ -562,13 +562,12 @@ class VideoProcessor:
         # Monitor progress and collect output
         def monitor_progress():
             nonlocal output_lines
-            time_pattern = re.compile(r"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})")
             for line in process.stdout:
                 output_lines.append(line)
                 if on_log:
                     on_log(line)
                 if total_duration and on_progress:
-                    match = time_pattern.search(line)
+                    match = _TIME_PATTERN.search(line)
                     if match:
                         hours, minutes, seconds, centiseconds = map(int, match.groups())
                         current_time = (
