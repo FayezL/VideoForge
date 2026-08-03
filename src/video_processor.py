@@ -6,6 +6,7 @@ import subprocess
 import json
 import os
 import re
+import time
 from typing import Optional, Dict, Callable, List, Tuple
 import threading
 
@@ -489,7 +490,7 @@ class VideoProcessor:
         output_path: str,
         duration: Optional[float],
         start_time: float,
-        on_progress: Optional[Callable[[float], None]],
+        on_progress: Optional[Callable[[float, Optional[float]], None]],
         on_log: Optional[Callable[[str], None]],
     ) -> Tuple[bool, Optional[str]]:
         """Process using subprocess with progress tracking"""
@@ -562,19 +563,37 @@ class VideoProcessor:
         # Monitor progress and collect output
         def monitor_progress():
             nonlocal output_lines
+            last_emit_time = 0.0
+            last_emitted_percent = -1.0
+            last_emitted_speed: Optional[float] = None
+            latest_percent: Optional[float] = None
+            latest_speed: Optional[float] = None
             for line in process.stdout:
                 output_lines.append(line)
                 if on_log:
                     on_log(line)
-                if total_duration and on_progress:
-                    match = _TIME_PATTERN.search(line)
-                    if match:
-                        hours, minutes, seconds, centiseconds = map(int, match.groups())
-                        current_time = (
-                            hours * 3600 + minutes * 60 + seconds + centiseconds / 100.0
-                        )
-                        percent = min(100.0, (current_time / total_duration) * 100.0)
-                        on_progress(percent)
+                if not (on_progress and total_duration):
+                    continue
+                pct, spd = parse_ffmpeg_line(line, total_duration)
+                if pct is not None:
+                    latest_percent = pct
+                if spd is not None:
+                    latest_speed = spd
+                if latest_percent is None and latest_speed is None:
+                    continue
+                now = time.monotonic()
+                changed = (
+                    latest_percent != last_emitted_percent
+                    or latest_speed != last_emitted_speed
+                )
+                if changed or (now - last_emit_time) >= 0.25:
+                    on_progress(
+                        latest_percent if latest_percent is not None else 0.0,
+                        latest_speed,
+                    )
+                    last_emitted_percent = latest_percent
+                    last_emitted_speed = latest_speed
+                    last_emit_time = now
 
         monitor_thread = threading.Thread(target=monitor_progress, daemon=True)
         monitor_thread.start()
@@ -583,7 +602,7 @@ class VideoProcessor:
 
         if process.returncode == 0:
             if on_progress:
-                on_progress(100.0)
+                on_progress(100.0, None)
             if on_log:
                 on_log("Processing completed successfully!\n")
             return True, None
