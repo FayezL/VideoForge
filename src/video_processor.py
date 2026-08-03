@@ -5,6 +5,7 @@ FFmpeg video processing logic
 import subprocess
 import json
 import os
+import re
 from typing import Optional, Dict, Callable, List, Tuple
 import threading
 
@@ -16,6 +17,65 @@ except ImportError:
     HAS_FFMPEG_PYTHON = False
 
 from src.state import AppState, ProcessingFile, FileStatus, CutUnit
+
+
+_TIME_PATTERN = re.compile(r"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})")
+_SPEED_PATTERN = re.compile(r"speed=\s*([\d.]+)x")
+
+
+def parse_ffmpeg_progress(
+    text: str, total_duration: Optional[float]
+) -> Tuple[Optional[float], Optional[float]]:
+    """Parse a single ffmpeg stats chunk.
+
+    Args:
+        text: One stats chunk. Must NOT contain embedded carriage returns —
+            split on ``\\r`` and call this per chunk (see :func:`parse_ffmpeg_line`).
+        total_duration: Total source duration in seconds, used to compute percent.
+            If ``None`` or ``<= 0``, percent is ``None``.
+
+    Returns:
+        ``(percent, speed)`` where ``percent`` is in 0–100 (or ``None`` if no
+        ``time=`` was found or duration is unknown) and ``speed`` is the ffmpeg
+        multiplier (or ``None``; ``speed=N/A`` does not match the regex).
+    """
+    percent: Optional[float] = None
+    speed: Optional[float] = None
+
+    time_match = _TIME_PATTERN.search(text)
+    if time_match and total_duration and total_duration > 0:
+        hours, minutes, seconds, centiseconds = map(int, time_match.groups())
+        current = hours * 3600 + minutes * 60 + seconds + centiseconds / 100.0
+        percent = min(100.0, (current / total_duration) * 100.0)
+
+    speed_match = _SPEED_PATTERN.search(text)
+    if speed_match:
+        try:
+            speed = float(speed_match.group(1))
+        except ValueError:
+            speed = None
+
+    return percent, speed
+
+
+def parse_ffmpeg_line(
+    line: str, total_duration: Optional[float]
+) -> Tuple[Optional[float], Optional[float]]:
+    """Parse a full stdout line that may contain multiple ``\\r``-separated chunks.
+
+    ffmpeg emits progress stats using carriage returns within a single line;
+    iterating ``for line in process.stdout`` yields the whole run joined by
+    ``\\r``. Returns the latest non-None percent and speed seen across chunks.
+    """
+    latest_percent: Optional[float] = None
+    latest_speed: Optional[float] = None
+    for chunk in line.split("\r"):
+        pct, spd = parse_ffmpeg_progress(chunk, total_duration)
+        if pct is not None:
+            latest_percent = pct
+        if spd is not None:
+            latest_speed = spd
+    return latest_percent, latest_speed
 
 
 def parse_timestamp(ts: str) -> float:
@@ -433,7 +493,6 @@ class VideoProcessor:
         on_log: Optional[Callable[[str], None]],
     ) -> Tuple[bool, Optional[str]]:
         """Process using subprocess with progress tracking"""
-        import re
 
         cmd = ["ffmpeg", "-i", input_path]
 
