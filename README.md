@@ -96,6 +96,25 @@ PyInstaller bundles everything — including the FFmpeg binary — into a standa
 
 ---
 
+## Gallery
+
+### Task-Based Batch Workflow
+<img src="docs/screenshots/main-window.png" alt="Batch Processor" width="450"/>
+
+Configure multiple independent processing tasks with separate file lists, trim modes, and encoding profiles.
+
+### Real-Time Progress Tracking
+<img src="docs/screenshots/FFmpeg%20Encoding%20in%20Progress.png" alt="FFmpeg Progress" width="450"/>
+
+Live FFmpeg output, per-file progress bars, and concurrent encoding with worker pool management.
+
+### Visual Logo Picker
+<img src="docs/screenshots/Logo%20Picker.png" alt="Logo Picker" width="450"/>
+
+Click-drag a rectangle to manually select watermark regions. Coordinates automatically convert from display resolution to original video resolution. Tested on everything from indie films to classic cinema.
+
+---
+
 ## Architecture
 
 ```
