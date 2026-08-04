@@ -451,6 +451,14 @@ class SingleProcessorFrame(ctk.CTkScrollableFrame):
         )
         self.progress_percent.pack(anchor="w", pady=(5, 0))
 
+        self.progress_speed = ctk.CTkLabel(
+            progress_content,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color="#60a5fa",
+        )
+        self.progress_speed.pack(anchor="w", pady=(2, 0))
+
         # Disable button
         self.process_btn.configure(state="disabled")
 
@@ -471,8 +479,8 @@ class SingleProcessorFrame(ctk.CTkScrollableFrame):
         )
         output_path = os.path.join(output_folder, output_name)
 
-        def on_progress(percent: float):
-            self.after(0, lambda: self._update_progress(percent))
+        def on_progress(percent: float, speed=None):
+            self.after(0, lambda p=percent, s=speed: self._update_progress(p, s))
 
         def on_log(message: str):
             self.state.add_log(message)
@@ -491,10 +499,14 @@ class SingleProcessorFrame(ctk.CTkScrollableFrame):
             self.state.add_log(f"Error: {err_msg}")
             self.after(0, lambda: self._on_complete(False, err_msg))
 
-    def _update_progress(self, percent: float):
-        """Update progress bar"""
+    def _update_progress(self, percent: float, speed=None):
+        """Update progress bar, percent label, and optional speed label."""
         self.progress_bar.set(percent / 100.0)
         self.progress_percent.configure(text=f"{percent:.1f}%")
+        if self.progress_speed is not None:
+            self.progress_speed.configure(
+                text=f"{speed:.1f}x" if speed is not None else ""
+            )
 
     def _on_complete(self, success: bool, error_msg: str = None):
         """Handle processing completion"""

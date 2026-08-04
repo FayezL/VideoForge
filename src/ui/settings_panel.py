@@ -311,7 +311,8 @@ class SettingsPanel(ctk.CTkScrollableFrame):
             "• Universal streaming compatibility (iPhone, Android, TVs, web)\n"
             "• Real-time progress tracking\n"
             "• Modern dark-themed UI\n\n"
-            "Built with Python and CustomTkinter"
+            "Built with Python and CustomTkinter\n\n"
+            "Developer: fmamdoh504@gmail.com"
         )
 
         about_label = ctk.CTkLabel(
