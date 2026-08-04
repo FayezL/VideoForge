@@ -5,7 +5,7 @@ Batch Processor UI Component
 import customtkinter as ctk
 import tkinter.filedialog as filedialog
 from tkinter import messagebox
-from typing import List
+from typing import List, Dict, Optional
 from datetime import datetime
 import threading
 import os
@@ -49,6 +49,14 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         self.drag_drop_handler = None  # Will be initialized after UI creation
         self.current_detection_session = None  # Current logo detection session
         self._detection_cancelled = False  # Flag to cancel detection
+
+        # Persistent per-file progress widget refs (file.id -> widgets dict).
+        # Populated by _create_file_item; consumed by _tick_progress.
+        self._row_widgets: Dict[str, Dict[str, object]] = {}
+        # Aggregate header widgets (created in _create_file_section).
+        self.batch_progress_bar = None
+        self.batch_summary_label = None
+        self._tick_after_id: Optional[str] = None
 
         self._create_ui()
         self.state.register_log_callback(self._on_log_update)
@@ -1062,6 +1070,25 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         )
         clear_btn.pack(side="right")
 
+        # Aggregate batch progress bar + summary. Lives in its own wrapper frame
+        # so the whole block can be packed/unpacked to show/hide during a run.
+        agg_wrap = ctk.CTkFrame(file_frame, fg_color="transparent")
+        self._batch_wrap = agg_wrap  # hidden by default; revealed by _start_processing
+
+        self.batch_progress_bar = ctk.CTkProgressBar(agg_wrap, height=14)
+        self.batch_progress_bar.set(0.0)
+        self.batch_progress_bar.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        self.batch_summary_label = ctk.CTkLabel(
+            agg_wrap,
+            text="",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color="#60a5fa",
+            width=180,
+            anchor="e",
+        )
+        self.batch_summary_label.pack(side="right")
+
         self.file_list_frame = ctk.CTkScrollableFrame(
             file_frame, fg_color="#0f172a", height=220, corner_radius=10
         )
@@ -1166,6 +1193,8 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         """Update file list display"""
         for w in self.file_list_frame.winfo_children():
             w.destroy()
+        # Full rebuild invalidates all persistent row refs.
+        self._row_widgets = {}
 
         count = len(self._files())
         self.file_count_label.configure(text=f"{count} file{'s' if count != 1 else ''}")
@@ -1269,9 +1298,40 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
             end_entry.bind("<KeyRelease>", lambda e: update_cut())
 
         if file.status == FileStatus.PROCESSING:
-            pb = ctk.CTkProgressBar(item)
-            pb.pack(fill="x", padx=12, pady=(0, 8))
-            pb.set(file.progress / 100.0)
+            prog_frame = ctk.CTkFrame(item, fg_color="transparent")
+            prog_frame.pack(fill="x", padx=12, pady=(0, 8))
+
+            pb = ctk.CTkProgressBar(prog_frame)
+            pb.pack(side="left", fill="x", expand=True, padx=(0, 8))
+            pb.set(file.progress)  # progress is now a 0.0-1.0 fraction
+
+            pct_label = ctk.CTkLabel(
+                prog_frame,
+                text=f"{file.progress * 100:.0f}%",
+                font=ctk.CTkFont(size=11, weight="bold"),
+                text_color="#e2e8f0",
+                width=44,
+                anchor="e",
+            )
+            pct_label.pack(side="left", padx=(0, 8))
+
+            speed_text = f"{file.speed:.1f}x" if file.speed is not None else ""
+            speed_label = ctk.CTkLabel(
+                prog_frame,
+                text=speed_text,
+                font=ctk.CTkFont(size=11),
+                text_color="#60a5fa",
+                width=48,
+                anchor="e",
+            )
+            speed_label.pack(side="left")
+
+            # Persist refs so _tick_progress can update in place without rebuild.
+            self._row_widgets[file.id] = {
+                "bar": pb,
+                "pct_label": pct_label,
+                "speed_label": speed_label,
+            }
 
         if file.error:
             err_display = (
@@ -1893,6 +1953,66 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
         self.start_btn.pack_forget()
         self.stop_btn.pack(side="left", padx=(0, 12))
+        # Reveal the aggregate batch progress header and start the tick loop.
+        self._batch_wrap.pack(fill="x", padx=16, pady=(0, 10), before=self.file_list_frame)
+        if self.batch_progress_bar is not None:
+            self.batch_progress_bar.set(0.0)
+        if self.batch_summary_label is not None:
+            self.batch_summary_label.configure(text="0 / 0  •  0%")
+        # Prime the tick loop (150ms cadence once processing is underway).
+        if self._tick_after_id is None:
+            self._tick_after_id = self.after(150, self._tick_progress)
+
+    def _format_batch_summary(self, overall, avg_speed, completed, total):
+        pct = overall * 100.0
+        if avg_speed is not None:
+            return f"{completed} / {total}  •  {pct:.0f}%  •  avg {avg_speed:.1f}x"
+        return f"{completed} / {total}  •  {pct:.0f}%"
+
+    def _tick_progress(self):
+        """Periodic UI refresh (runs on the GUI thread via after()).
+
+        Updates persistent per-row widgets in place and the aggregate header.
+        Never rebuilds the file list — that avoids flicker/scroll jumps.
+        """
+        from src.state import compute_batch_progress  # local import avoids cycle
+
+        files = self._files()
+        # Per-row in-place updates.
+        for f in files:
+            refs = self._row_widgets.get(f.id)
+            if not refs:
+                continue
+            try:
+                refs["bar"].set(max(0.0, min(1.0, f.progress)))
+                refs["pct_label"].configure(text=f"{f.progress * 100:.0f}%")
+                refs["speed_label"].configure(
+                    text=f"{f.speed:.1f}x" if f.speed is not None else ""
+                )
+            except Exception:
+                # Widget may have been destroyed mid-tick; drop stale refs.
+                self._row_widgets.pop(f.id, None)
+
+        # Aggregate header.
+        overall, avg_speed, completed, total = compute_batch_progress(files)
+        if self.batch_progress_bar is not None:
+            try:
+                self.batch_progress_bar.set(overall)
+            except Exception:
+                pass
+        if self.batch_summary_label is not None:
+            try:
+                self.batch_summary_label.configure(
+                    text=self._format_batch_summary(overall, avg_speed, completed, total)
+                )
+            except Exception:
+                pass
+
+        # Reschedule while any file is still processing.
+        if any(f.status == FileStatus.PROCESSING for f in files):
+            self._tick_after_id = self.after(150, self._tick_progress)
+        else:
+            self._tick_after_id = None
 
     def _stop_processing(self):
         """Stop processing"""
@@ -1928,9 +2048,24 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
     def _on_processing_complete(self, failed_errors: list = None):
         """Handle completion"""
+        # Stop the periodic tick loop.
+        if self._tick_after_id is not None:
+            try:
+                self.after_cancel(self._tick_after_id)
+            except Exception:
+                pass
+            self._tick_after_id = None
+        # One last sync so final per-file bars/labels reflect completion state.
+        self._tick_progress()
+
         self.stop_btn.pack_forget()
         self.start_btn.pack(side="left", padx=(0, 12))
         self._update_file_list()
+        # Hide the aggregate header now that the run is over.
+        try:
+            self._batch_wrap.pack_forget()
+        except Exception:
+            pass
 
         if failed_errors:
             name, err = failed_errors[0]
