@@ -2,7 +2,7 @@
 Application state management
 """
 
-from typing import List, Dict, Optional, Callable, Any
+from typing import List, Dict, Optional, Callable, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 import multiprocessing
@@ -52,6 +52,44 @@ class ProcessingFile:
     use_custom_cut: bool = False
     custom_cut_start_seconds: Optional[float] = None  # Start time for this file
     custom_cut_end_seconds: Optional[float] = None  # End time (None = to end)
+
+
+def compute_batch_progress(
+    files: "List[ProcessingFile]",
+) -> "Tuple[float, Optional[float], int, int]":
+    """Compute aggregate batch progress.
+
+    Returns ``(overall_fraction, avg_speed, completed_count, total_count)``.
+
+    - ``overall_fraction`` is in [0.0, 1.0]. Each file contributes 1/N where
+      N = len(files); COMPLETED and ERROR files contribute 1.0 (the work is
+      done either way), PROCESSING files contribute ``file.progress``
+      (expected to already be a 0.0–1.0 fraction), PENDING files contribute 0.0.
+    - ``avg_speed`` is the mean of ``file.speed`` over PROCESSING files whose
+      speed is not None, or None if there are none.
+    - ``completed_count`` counts only COMPLETED files (successes).
+    """
+    total = len(files)
+    if total == 0:
+        return 0.0, None, 0, 0
+
+    contribution = 0.0
+    completed = 0
+    active_speeds: List[float] = []
+    for f in files:
+        if f.status == FileStatus.COMPLETED or f.status == FileStatus.ERROR:
+            contribution += 1.0
+            if f.status == FileStatus.COMPLETED:
+                completed += 1
+        elif f.status == FileStatus.PROCESSING:
+            contribution += max(0.0, min(1.0, f.progress))
+            if f.speed is not None:
+                active_speeds.append(f.speed)
+        # PENDING contributes 0.0
+
+    overall = contribution / total
+    avg = sum(active_speeds) / len(active_speeds) if active_speeds else None
+    return overall, avg, completed, total
 
 
 @dataclass
