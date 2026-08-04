@@ -18,7 +18,7 @@
 
 ## Overview
 
-Video editors, archivists, and media teams routinely process hundreds of recordings: trimming intros, removing broadcaster watermarks, re-encoding for universal compatibility, and renaming files sequentially. The standard approach — shell scripts and manual FFmpeg commands — is error-prone, repetitive, inaccessible to non-technical users, and offers no visibility into batch progress.
+Video editors, archivists, and media teams routinely process hundreds of recordings: trimming intros, cleaning up broadcaster on-screen graphics, re-encoding for universal compatibility, and renaming files sequentially. The standard approach — shell scripts and manual FFmpeg commands — is error-prone, repetitive, inaccessible to non-technical users, and offers no visibility into batch progress.
 
 VideoForge addresses this by wrapping FFmpeg's encoding engine in a clean, dark-themed desktop GUI built with **CustomTkinter**. Users drag-drop files, configure processing options through visual controls, and monitor real-time progress as files encode in parallel.
 
@@ -30,7 +30,7 @@ VideoForge addresses this by wrapping FFmpeg's encoding engine in a clean, dark-
 
 ### Computer-Vision Logo Detection
 
-The standout feature. Rather than manually specifying watermark coordinates, VideoForge **detects them automatically** using a temporal-stability algorithm:
+The standout feature. Rather than manually specifying overlay coordinates, VideoForge **detects them automatically** using a temporal-stability algorithm:
 
 1. **Sample 15 frames** evenly across the video, skipping intro/outro fade regions
 2. **Stack frames into a NumPy array** and compute per-pixel temporal variance (`np.var(axis=0)`)
@@ -42,7 +42,7 @@ No deep learning, no API calls, no model weights — purely classical CV with Op
 
 | Method | Approach | Use Case |
 |---|---|---|
-| **Temporal Stability** (default) | Per-pixel variance across frame stack | Broadcaster watermarks, news tickers |
+| **Temporal Stability** (default) | Per-pixel variance across frame stack | Broadcaster on-screen graphics, news tickers |
 | OpenCV Edges (legacy) | Canny edge detection + contour filter | Fallback / comparison |
 | Google Cloud Vision (optional) | ML-based object detection | Complex multi-logo scenes |
 
@@ -80,7 +80,7 @@ FFmpeg stderr → parse_ffmpeg_line() → on_progress(percent, speed)
 
 ### Visual Logo Picker
 
-Click-drag a rectangle on a preview frame to manually select a watermark region. Coordinates convert from display resolution to original video resolution automatically. Copy-paste support for applying the same region across files.
+Click-drag a rectangle on a preview frame to manually select an overlay region. Coordinates convert from display resolution to original video resolution automatically. Copy-paste support for applying the same region across files.
 
 ### Sequential Rename Plan
 
@@ -111,7 +111,7 @@ Live FFmpeg output, per-file progress bars, and concurrent encoding with worker 
 ### Visual Logo Picker
 <img src="docs/screenshots/Logo%20Picker.png" alt="Logo Picker" width="450"/>
 
-Click-drag a rectangle to manually select watermark regions. Coordinates automatically convert from display resolution to original video resolution. Tested on everything from indie films to classic cinema.
+Click-drag a rectangle to manually select overlay regions. Coordinates automatically convert from display resolution to original video resolution. Tested on everything from indie films to classic cinema.
 
 ---
 
@@ -267,7 +267,7 @@ Set `GOOGLE_APPLICATION_CREDENTIALS` to your service-account JSON. See [`docs/LO
 3. **Configure options** per task:
    - Cut mode: Time (skip intro/cut outro), Markers (type timestamps), or Split (divide into N parts)
    - Encoding profile (Universal, High Quality, Small File, iOS)
-   - Delogo filter (auto-detect, visual picker, or manual coordinates)
+   - Clean feed generation — on-screen graphics (OSG) / overlay removal (auto-detect, visual picker, or manual coordinates)
    - Output folder, format, filename prefix/suffix
    - Sequential rename plan
 4. **Click Start** — live per-file progress bars with encoding speed, aggregate batch progress, FFmpeg log output, and stop button for cancellation
@@ -290,7 +290,7 @@ Live FFmpeg progress instrumentation: per-file progress bars with percentage and
 
 ### Visual Logo Picker
 
-Click-drag a rectangle to manually select watermark regions. Coordinates automatically convert from display resolution to original video resolution.
+Click-drag a rectangle to manually select overlay regions. Coordinates automatically convert from display resolution to original video resolution.
 
 ![Logo Picker](docs/screenshots/Logo%20Picker.png)
 

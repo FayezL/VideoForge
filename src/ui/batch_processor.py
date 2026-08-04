@@ -717,7 +717,7 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
         self.delogo_checkbox = ctk.CTkCheckBox(
             section_header,
-            text="✧  Apply Delogo Filter",
+            text="✧  Remove On-Screen Graphics (OSG)",
             command=self._on_delogo_toggle,
             font=ctk.CTkFont(size=14),
         )
@@ -1539,7 +1539,7 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
         if num_results == 0:
             self.detection_status_label.configure(
-                text="No logos detected — video appears logo-free. You can leave delogo off.",
+                text="No on-screen graphics detected — video appears clean. You can leave OSG removal off.",
                 text_color="#10B981",
             )
             # Show results area so user sees detection ran and concluded "no logos"
@@ -1657,7 +1657,7 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
         # Show confirmation
         self.detection_status_label.configure(
-            text=f"✓ Applied region ({x}, {y}) {w}x{h} to delogo filter",
+            text=f"✓ Applied region ({x}, {y}) {w}x{h} to OSG removal",
             text_color="#10B981",
         )
 

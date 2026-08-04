@@ -94,7 +94,7 @@ class LogoPickerDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             top_bar,
-            text="1. Click and drag over the logo    2. Click Apply",
+            text="1. Click and drag over the graphic    2. Click Apply",
             font=ctk.CTkFont(size=13, weight="bold"),
         ).pack(pady=(8, 2))
 
@@ -218,7 +218,7 @@ class LogoPickerDialog(ctk.CTkToplevel):
         if self._current_rect is None:
             messagebox.showinfo(
                 "No Selection",
-                "Click and drag over the logo first.",
+                "Click and drag over the graphic first.",
                 parent=self,
             )
             return

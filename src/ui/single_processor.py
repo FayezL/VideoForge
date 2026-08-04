@@ -203,7 +203,7 @@ class SingleProcessorFrame(ctk.CTkScrollableFrame):
 
         self.delogo_checkbox = ctk.CTkCheckBox(
             options_content,
-            text="Apply Delogo Filter",
+            text="Remove On-Screen Graphics (OSG)",
             command=self._on_delogo_toggle,
             font=ctk.CTkFont(size=14),
         )
