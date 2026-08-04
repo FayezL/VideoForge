@@ -1196,9 +1196,9 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         """Update file list display"""
         for w in self.file_list_frame.winfo_children():
             w.destroy()
-        # Full rebuild invalidates all persistent row refs and status cache.
+        # Full rebuild invalidates persistent row refs. Do NOT reset
+        # _last_statuses here — _tick_progress manages it after rebuild.
         self._row_widgets = {}
-        self._last_statuses = {}
 
         count = len(self._files())
         self.file_count_label.configure(text=f"{count} file{'s' if count != 1 else ''}")
@@ -1963,9 +1963,16 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
             self.batch_progress_bar.set(0.0)
         if self.batch_summary_label is not None:
             self.batch_summary_label.configure(text="0 / 0  •  0%")
-        # Prime the tick loop (150ms cadence once processing is underway).
-        if self._tick_after_id is None:
-            self._tick_after_id = self.after(150, self._tick_progress)
+        # Reset status cache so the first tick detects the initial PENDING state
+        # and only rebuilds when a real transition (PENDING->PROCESSING) occurs.
+        self._last_statuses = {}
+        # Cancel any stale tick from a previous run, then prime a fresh one.
+        if self._tick_after_id is not None:
+            try:
+                self.after_cancel(self._tick_after_id)
+            except Exception:
+                pass
+        self._tick_after_id = self.after(150, self._tick_progress)
 
     def _format_batch_summary(self, overall, avg_speed, completed, total):
         pct = overall * 100.0
@@ -1979,25 +1986,20 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         Updates persistent per-row widgets in place and the aggregate header.
         Rebuilds the file list only when a file's status transitions (e.g.
         PENDING->PROCESSING or PROCESSING->COMPLETED), so the per-row progress
-        sub-frame is created/removed at exactly the right moments without
-        flickering on every tick.
+        sub-frame is created/removed at exactly the right moments.
         """
         from src.state import compute_batch_progress  # local import avoids cycle
 
         files = self._files()
 
-        # Detect status transitions and rebuild the list when any occur.
-        # A rebuild re-creates rows with the correct widgets for the new status
-        # (e.g. the progress bar sub-frame for PROCESSING files) and refreshes
-        # _row_widgets accordingly.
-        changed = False
-        for f in files:
-            prev = self._last_statuses.get(f.id)
-            if prev != f.status:
-                changed = True
-            self._last_statuses[f.id] = f.status
+        # Detect status transitions. Build the new status map first, then
+        # compare against the PREVIOUS map. The rebuild must NOT reset this map.
+        current_statuses = {f.id: f.status for f in files}
+        changed = current_statuses != self._last_statuses
         if changed:
             self._update_file_list()
+        # Persist AFTER rebuild so it survives across ticks.
+        self._last_statuses = current_statuses
 
         # Per-row in-place updates (only for PROCESSING rows with refs).
         for f in files:
@@ -2037,6 +2039,13 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
     def _stop_processing(self):
         """Stop processing"""
+        # Cancel the tick loop.
+        if self._tick_after_id is not None:
+            try:
+                self.after_cancel(self._tick_after_id)
+            except Exception:
+                pass
+            self._tick_after_id = None
         self._set_processing(False)
         self.state.add_log("Processing stopped by user")
         self.stop_btn.pack_forget()
