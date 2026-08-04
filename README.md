@@ -274,27 +274,6 @@ Set `GOOGLE_APPLICATION_CREDENTIALS` to your service-account JSON. See [`docs/LO
 
 ---
 
-## Gallery
-
-### Main Window — Multi-Task Batch Workflow
-
-The primary interface: configure multiple independent processing tasks, each with separate file lists, trim modes, encoding profiles, and output destinations.
-
-![Main Window](docs/screenshots/main-window.png)
-
-### Real-Time Encoding Progress
-
-Live FFmpeg progress instrumentation: per-file progress bars with percentage and encoding speed, aggregate batch bar showing overall completion, and concurrent encoding via the worker pool.
-
-![FFmpeg Encoding in Progress](docs/screenshots/FFmpeg%20Encoding%20in%20Progress.png)
-
-### Visual Logo Picker
-
-Click-drag a rectangle to manually select overlay regions. Coordinates automatically convert from display resolution to original video resolution.
-
-![Logo Picker](docs/screenshots/Logo%20Picker.png)
-
----
 
 ## Packaging a Windows Executable
 
