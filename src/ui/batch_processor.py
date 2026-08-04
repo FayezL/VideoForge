@@ -1926,6 +1926,8 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
     def _start_processing(self):
         """Start batch processing"""
+        import sys
+        print("[DEBUG] _start_processing called", file=sys.stderr, flush=True)
         if not self._files():
             messagebox.showerror(
                 "Error",
@@ -1952,13 +1954,18 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
         self._sync_state_from_ui()
 
+        print(f"[DEBUG] starting process thread, {len(self._files())} files", file=sys.stderr, flush=True)
         thread = threading.Thread(target=self._process_thread, daemon=True)
         thread.start()
 
         self.start_btn.pack_forget()
         self.stop_btn.pack(side="left", padx=(0, 12))
         # Reveal the aggregate batch progress header and start the tick loop.
-        self._batch_wrap.pack(fill="x", padx=16, pady=(0, 10), before=self.file_list_frame)
+        try:
+            self._batch_wrap.pack(fill="x", padx=16, pady=(0, 10), before=self.file_list_frame)
+        except Exception as e:
+            print(f"[DEBUG] _batch_wrap.pack failed: {e}", file=sys.stderr, flush=True)
+            self._batch_wrap.pack(fill="x", padx=16, pady=(0, 10))
         if self.batch_progress_bar is not None:
             self.batch_progress_bar.set(0.0)
         if self.batch_summary_label is not None:
@@ -1973,6 +1980,7 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
             except Exception:
                 pass
         self._tick_after_id = self.after(150, self._tick_progress)
+        print("[DEBUG] tick scheduled", file=sys.stderr, flush=True)
 
     def _format_batch_summary(self, overall, avg_speed, completed, total):
         pct = overall * 100.0
@@ -1981,16 +1989,13 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         return f"{completed} / {total}  •  {pct:.0f}%"
 
     def _tick_progress(self):
-        """Periodic UI refresh (runs on the GUI thread via after()).
-
-        Updates persistent per-row widgets in place and the aggregate header.
-        Rebuilds the file list only when a file's status transitions (e.g.
-        PENDING->PROCESSING or PROCESSING->COMPLETED), so the per-row progress
-        sub-frame is created/removed at exactly the right moments.
-        """
+        """Periodic UI refresh (runs on the GUI thread via after())."""
+        import sys
         from src.state import compute_batch_progress  # local import avoids cycle
 
         files = self._files()
+        statuses = {f.id: f.status.value for f in files}
+        print(f"[DEBUG] tick: {statuses}", file=sys.stderr, flush=True)
 
         # Detect status transitions. Build the new status map first, then
         # compare against the PREVIOUS map. The rebuild must NOT reset this map.
@@ -2053,6 +2058,8 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
 
     def _process_thread(self):
         """Process queue in background"""
+        import sys
+        print("[DEBUG] _process_thread started", file=sys.stderr, flush=True)
         failed_errors = []
         try:
             output_override = (
@@ -2064,13 +2071,18 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
                 self.after(0, lambda: self._on_processing_complete(failed_errors))
 
             self._set_processing(True)
+            print(f"[DEBUG] calling process_queue with {len(self._files())} files", file=sys.stderr, flush=True)
             self.processor.process_queue(
                 self._files(),
                 on_file_error=lambda name, err: failed_errors.append((name, err)),
                 output_folder_override=output_override,
                 on_complete=lambda: self.after(0, on_done),
             )
+            print("[DEBUG] process_queue returned", file=sys.stderr, flush=True)
         except Exception as e:
+            print(f"[DEBUG] _process_thread EXCEPTION: {e}", file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
             self.state.add_log(f"Processing error: {str(e)}")
             failed_errors.append(("", str(e)))
             self._set_processing(False)
