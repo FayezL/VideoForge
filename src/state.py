@@ -34,13 +34,19 @@ class CutUnit(Enum):
 
 @dataclass
 class ProcessingFile:
-    """Represents a file being processed"""
+    """Represents a file being processed.
+
+    ``progress`` is always a fraction in [0.0, 1.0]. ``speed`` is ffmpeg's
+    encoding-speed multiplier (e.g. 2.3 means 2.3x realtime) or ``None`` when
+    not currently known.
+    """
 
     id: str
     path: str
     name: str
     status: FileStatus = FileStatus.PENDING
     progress: float = 0.0
+    speed: Optional[float] = None
     error: Optional[str] = None
     # Per-file cut times (override global settings if set)
     use_custom_cut: bool = False

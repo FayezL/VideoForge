@@ -661,10 +661,13 @@ class VideoProcessor:
                 if on_file_error:
                     on_file_error(file.name, error_msg or "Unknown error")
 
-        def on_progress(file_id: str, percent: float):
+        def on_progress(file_id: str, percent: float, speed: Optional[float] = None):
             for f in files:
                 if f.id == file_id:
-                    f.progress = percent
+                    # Normalize percent (0-100 on the wire) to a 0.0-1.0 fraction
+                    # at the single storage boundary.
+                    f.progress = max(0.0, min(1.0, percent / 100.0))
+                    f.speed = speed
                     break
 
         try:

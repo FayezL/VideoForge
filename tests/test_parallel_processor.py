@@ -129,7 +129,7 @@ class TestParallelProcessor:
         assert processor.get_active_count() == 0
 
     def test_callbacks_invoked(self, mock_state, mock_video_processor):
-        """Test that callbacks are invoked correctly"""
+        """Test that callbacks are invoked correctly, including speed."""
         processor = ParallelProcessor(mock_state, mock_video_processor, max_workers=1)
 
         file = ProcessingFile(id="1", path="/path/video.mp4", name="video.mp4")
@@ -146,7 +146,7 @@ class TestParallelProcessor:
             [file],
             on_file_start=start_callback,
             on_file_complete=complete_callback,
-            on_progress=progress_callback
+            on_progress=progress_callback,
         )
 
         # Wait for processing to complete
@@ -158,6 +158,43 @@ class TestParallelProcessor:
 
         # Clean up
         processor.stop()
+
+    def test_progress_callback_carries_speed_and_normalizes(
+        self, mock_state, mock_video_processor
+    ):
+        """on_progress forwards speed, and the process_queue closure stores a fraction."""
+        # Simulate the on_progress closure that process_queue builds.
+        files = [ProcessingFile(id="1", path="/p/a.mp4", name="a.mp4")]
+
+        captured = {}
+
+        def on_progress(file_id, percent, speed=None):
+            captured["percent"] = percent
+            captured["speed"] = speed
+            for f in files:
+                if f.id == file_id:
+                    f.progress = max(0.0, min(1.0, percent / 100.0))
+                    f.speed = speed
+
+        # Wire through a real ParallelProcessor using a fake processor that
+        # invokes the per-file progress callback with speed.
+        class FakeVP:
+            def _get_output_path(self, *a, **k):
+                return "/out.mp4"
+
+            def process_video(self, *args, on_progress=None, **kwargs):
+                on_progress(47.0, 2.3)  # percent + speed
+                return True, None
+
+        processor = ParallelProcessor(mock_state, FakeVP(), max_workers=1)
+        processor.process_batch(files, on_progress=on_progress)
+        time.sleep(0.4)
+        processor.stop()
+
+        assert captured["percent"] == 47.0
+        assert captured["speed"] == 2.3
+        assert abs(files[0].progress - 0.47) < 1e-6  # normalized to fraction
+        assert files[0].speed == 2.3
 
     def test_cannot_start_while_processing(self, mock_state, mock_video_processor, sample_files):
         """Test that starting batch while already processing raises error"""

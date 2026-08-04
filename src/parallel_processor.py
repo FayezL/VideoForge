@@ -45,14 +45,14 @@ class ParallelProcessor:
         # Callbacks
         self._on_file_start: Optional[Callable[[ProcessingFile], None]] = None
         self._on_file_complete: Optional[Callable[[ProcessingFile, bool, Optional[str]], None]] = None
-        self._on_progress: Optional[Callable[[str, float], None]] = None
+        self._on_progress: Optional[Callable[[str, float, Optional[float]], None]] = None
 
     def process_batch(
         self,
         files: List[ProcessingFile],
         on_file_start: Optional[Callable[[ProcessingFile], None]] = None,
         on_file_complete: Optional[Callable[[ProcessingFile, bool, Optional[str]], None]] = None,
-        on_progress: Optional[Callable[[str, float], None]] = None
+        on_progress: Optional[Callable[[str, float, Optional[float]], None]] = None
     ) -> None:
         """
         Process a batch of files in parallel.
@@ -61,7 +61,7 @@ class ParallelProcessor:
             files: List of files to process
             on_file_start: Callback when file processing starts (file)
             on_file_complete: Callback when file completes (file, success, error_msg)
-            on_progress: Callback for progress updates (file_id, percent)
+            on_progress: Callback for progress updates (file_id, percent, speed)
 
         Note:
             Processing runs in background thread. Call stop() to terminate.
@@ -191,9 +191,9 @@ class ParallelProcessor:
 
                 try:
                     # Create progress callback for this file
-                    def progress_callback(percent: float):
+                    def progress_callback(percent: float, speed: Optional[float] = None):
                         if self._on_progress:
-                            self._on_progress(file.id, percent)
+                            self._on_progress(file.id, percent, speed)
 
                     # Process video with per-file cut times
                     def log_callback(message: str):
