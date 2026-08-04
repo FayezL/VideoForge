@@ -53,6 +53,9 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         # Persistent per-file progress widget refs (file.id -> widgets dict).
         # Populated by _create_file_item; consumed by _tick_progress.
         self._row_widgets: Dict[str, Dict[str, object]] = {}
+        # Last-seen status per file id, used by _tick_progress to detect
+        # transitions (e.g. PENDING->PROCESSING) that require a row rebuild.
+        self._last_statuses: Dict[str, FileStatus] = {}
         # Aggregate header widgets (created in _create_file_section).
         self.batch_progress_bar = None
         self.batch_summary_label = None
@@ -1193,8 +1196,9 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         """Update file list display"""
         for w in self.file_list_frame.winfo_children():
             w.destroy()
-        # Full rebuild invalidates all persistent row refs.
+        # Full rebuild invalidates all persistent row refs and status cache.
         self._row_widgets = {}
+        self._last_statuses = {}
 
         count = len(self._files())
         self.file_count_label.configure(text=f"{count} file{'s' if count != 1 else ''}")
@@ -1973,12 +1977,29 @@ class BatchProcessorFrame(ctk.CTkScrollableFrame):
         """Periodic UI refresh (runs on the GUI thread via after()).
 
         Updates persistent per-row widgets in place and the aggregate header.
-        Never rebuilds the file list — that avoids flicker/scroll jumps.
+        Rebuilds the file list only when a file's status transitions (e.g.
+        PENDING->PROCESSING or PROCESSING->COMPLETED), so the per-row progress
+        sub-frame is created/removed at exactly the right moments without
+        flickering on every tick.
         """
         from src.state import compute_batch_progress  # local import avoids cycle
 
         files = self._files()
-        # Per-row in-place updates.
+
+        # Detect status transitions and rebuild the list when any occur.
+        # A rebuild re-creates rows with the correct widgets for the new status
+        # (e.g. the progress bar sub-frame for PROCESSING files) and refreshes
+        # _row_widgets accordingly.
+        changed = False
+        for f in files:
+            prev = self._last_statuses.get(f.id)
+            if prev != f.status:
+                changed = True
+            self._last_statuses[f.id] = f.status
+        if changed:
+            self._update_file_list()
+
+        # Per-row in-place updates (only for PROCESSING rows with refs).
         for f in files:
             refs = self._row_widgets.get(f.id)
             if not refs:

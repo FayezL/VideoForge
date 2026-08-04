@@ -368,7 +368,7 @@ class VideoProcessor:
         input_path: str,
         output_path: str,
         total_duration: float,
-        on_progress: Optional[Callable[[float], None]] = None,
+        on_progress: Optional[Callable[[float, Optional[float]], None]] = None,
         on_log: Optional[Callable[[str], None]] = None,
     ) -> Tuple[bool, Optional[str]]:
         """Split video into N equal parts after applying optional TIME trim.
@@ -438,7 +438,7 @@ class VideoProcessor:
         output_path: str,
         duration: Optional[float],
         start_time: float,
-        on_progress: Optional[Callable[[float], None]],
+        on_progress: Optional[Callable[[float, Optional[float]], None]],
         on_log: Optional[Callable[[str], None]],
     ) -> Tuple[bool, Optional[str]]:
         """Process using ffmpeg-python library"""
