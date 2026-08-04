@@ -307,7 +307,7 @@ class SettingsPanel(ctk.CTkScrollableFrame):
             "• Batch processing of video files\n"
             "• Flexible trim/cut options with seconds precision\n"
             "• Multiple processing profiles (Universal, High Quality, Small File, iOS)\n"
-            "• Clean feed generation — on-screen graphics (OSG) / watermark removal\n"
+            "• Clean feed generation — on-screen graphics (OSG) removal\n"
             "• Universal streaming compatibility (iPhone, Android, TVs, web)\n"
             "• Real-time progress tracking\n"
             "• Modern dark-themed UI\n\n"
